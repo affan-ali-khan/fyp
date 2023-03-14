@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 let userschema = new Schema({
-  erp: {
+  username: {
     type: String
   },
   email: {
