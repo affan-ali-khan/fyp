@@ -10,7 +10,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/routify', { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect('mongodb+srv://ebadurrehman:Iba22395@fyp.sphtxvo.mongodb.net/routify', { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     console.log('Connected to database.');
   })
