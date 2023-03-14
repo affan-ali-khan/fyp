@@ -3,6 +3,8 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const User = require('../schema/user');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(bodyParser.json());
@@ -35,6 +37,24 @@ router.post('/signup', async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'An error occurred.' });
+  }
+});
+
+// Signin API
+router.post('/signin', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await User.findOne({ username, password }).exec();
+
+    if (!user) {
+      res.status(401).json({ message: 'Invalid credentials' });
+    } else {
+      res.status(200).json({ message: 'Sign in successful' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

@@ -12,4 +12,5 @@ let userschema = new Schema({
   }
 
   })
+
 module.exports = mongoose.model('user',userschema)
