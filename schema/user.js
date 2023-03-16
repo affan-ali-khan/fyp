@@ -9,6 +9,9 @@ let userschema = new Schema({
   },
   password: {
     type: String
+  },
+  erp:{
+    type:Number
   }
 
   })

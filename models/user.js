@@ -22,15 +22,26 @@ mongoose.connect('mongodb+srv://ebadurrehman:Iba22395@fyp.sphtxvo.mongodb.net/ro
 
 // Signup API
 router.post('/signup', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password,erp } = req.body;
+  
   // Create a new user object
   const user = new User({
     username,
     email,
-    password
+    password,
+    erp
   });
 
   try {
+    const existingUser = await User.findOne({ email: req.body.email });
+    const existingUsererp = await User.findOne({ erp: req.body.erp });
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    else if (existingUsererp) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
     // Save the user object to the database
     await user.save();
     res.status(201).json({ message: 'User created successfully.' });
