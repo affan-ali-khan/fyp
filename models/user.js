@@ -5,6 +5,7 @@ const User = require('../schema/user');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+//const bcrypt = require("bcryptjs");
 
 const app = express();
 app.use(bodyParser.json());
@@ -22,16 +23,20 @@ mongoose.connect('mongodb+srv://ebadurrehman:Iba22395@fyp.sphtxvo.mongodb.net/ro
   const validDomains = ['iba.edu.pk', 'khi.iba.edu.pk'];
 // Signup API
 router.post('/signup', async (req, res) => {
-  const { username, email, password,erp } = req.body;
+  var { username, email, password,erp } = req.body;
   
   // Create a new user object
+  const salt = await bcrypt.genSalt();
+  const passwordHash = await bcrypt.hash(password, salt);
+  //console.log(password)
+  password=passwordHash
+  //console.log(passwordHash)
   const user = new User({
     username,
     email,
     password,
     erp
   });
-
   try {
     const existingUser = await User.findOne({ email: req.body.email });
     const existingUsererp = await User.findOne({ erp: req.body.erp });
@@ -59,11 +64,18 @@ router.post('/signup', async (req, res) => {
 
 // Signin API
 router.post('/signin', async (req, res) => {
-  const { username, password } = req.body;
-
+  const { email, password } = req.body;
+  
   try {
-    const user = await User.findOne({ username, password }).exec();
 
+    const user = await User.findOne({ email});
+    const userH = await User.findOne({ email});
+
+    //console.log(userH.password)
+
+    const isMatch = await bcrypt.compare(password, userH.password);
+    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials." });
+    //console.log(isMatch)
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
     } else {
