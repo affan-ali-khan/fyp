@@ -5,6 +5,8 @@ const User = require('../schema/user');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv').config();
+const JWT_KEY = process.env.JWT_KEY;
 //const bcrypt = require("bcryptjs");
 
 const app = express();
@@ -67,25 +69,43 @@ router.post('/signin', async (req, res) => {
   const { email, password } = req.body;
   
   try {
-
-    const user = await User.findOne({ email});
-    const userH = await User.findOne({ email});
-
-    //console.log(userH.password)
-
+    const user = await User.findOne({ email });
+    const userH = await User.findOne({ email });
     const isMatch = await bcrypt.compare(password, userH.password);
     if (!isMatch) return res.status(400).json({ msg: "Invalid credentials." });
-    //console.log(isMatch)
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
     } else {
-      res.status(200).json({ message: 'Sign in successful' });
+      const token = jwt.sign({
+        email: user.email,
+        userId: user._id
+      }, 
+      process.env.JWT_KEY, 
+      {
+        expiresIn: "1h"
+      },
+      );
+      res.status(200).json({ message: 'Sign in successful', token: token });
     }
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+//Signout API
+router.post('/signout', async (req, res) => {
+  try {
+    // Clear the token from the client-side by removing the token cookie
+    res.clearCookie('token');
+    
+    res.status(200).json({ message: 'Sign out successful' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 //edit user
 router.put('/users/:userId', async (req, res) => {
   const userId = req.params.userId;
