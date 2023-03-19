@@ -11,8 +11,11 @@ let userschema = new Schema({
     type: String
   },
   erp:{
-    type:Number
-  }
+    type: Number
+  },
+  otp: {
+    type: String
+  },
 
   })
 

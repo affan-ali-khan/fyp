@@ -7,6 +7,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv').config();
 const JWT_KEY = process.env.JWT_KEY;
+const otpGenerator = require('otp-generator');
+const nodemailer = require('nodemailer');
 //const bcrypt = require("bcryptjs");
 
 const app = express();
@@ -23,46 +25,95 @@ mongoose.connect('mongodb+srv://ebadurrehman:Iba22395@fyp.sphtxvo.mongodb.net/ro
     console.log('Connection failed.');
   });
   const validDomains = ['iba.edu.pk', 'khi.iba.edu.pk'];
-// Signup API
-router.post('/signup', async (req, res) => {
-  var { username, email, password,erp } = req.body;
-  
-  // Create a new user object
-  const salt = await bcrypt.genSalt();
-  const passwordHash = await bcrypt.hash(password, salt);
-  //console.log(password)
-  password=passwordHash
-  //console.log(passwordHash)
-  const user = new User({
-    username,
-    email,
-    password,
-    erp
-  });
+
+// Create a new transporter object for sending emails
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: "projectecommercetest7@gmail.com",
+    pass: "lyeihxdkhgsvkxap",
+  },
+});
+
+
+
+// Add a new API endpoint to handle OTP verification
+router.post('/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+
   try {
-    const existingUser = await User.findOne({ email: req.body.email });
-    const existingUsererp = await User.findOne({ erp: req.body.erp });
-    const domain = email.split('@')[1];
-    if (!email || !password || !username)
-      return res.status(400).json({ msg: "Not all fields have been entered." });
-    if (!validDomains.includes(domain)) {
-      return res.status(400).send('Invalid email domain');
+    // Find the user in the database by email address
+    const user = await User.findOne({ email });
+
+    // Check if the OTP matches the one stored in the database
+    if (user && user.otp === otp) {
+      // Mark the user account as verified
+      user.verified = true;
+      user.otp = undefined;
+      await user.save();
+
+      res.status(200).json({ message: 'OTP verification successful.' });
+    } else {
+      res.status(400).json({ message: 'Invalid OTP.' });
     }
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-    else if (existingUsererp) {
-      return res.status(400).json({ message: 'erp already exists' });
-    }
-    // Save the user object to the database
-    await user.save();
-    res.status(201).json({ message: 'User created successfully.' });
-    //console.log(user._id)
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'An error occurred.' });
   }
 });
+
+  //Signup API
+  router.post('/signup', async (req, res) => {
+    const { username, email, password, erp } = req.body;
+  
+    // Create a new user object
+    const salt = await bcrypt.genSalt();
+    const passwordHash = await bcrypt.hash(password, salt);
+    const otp = otpGenerator.generate(6, { digits: true, alphabets: false, upperCase: false, specialChars: false });
+    const user = new User({
+      username,
+      email,
+      password: passwordHash,
+      erp,
+      otp, // Store the OTP in the database
+    });
+  
+    try {
+      const existingUser = await User.findOne({ email });
+      const existingUsererp = await User.findOne({ erp });
+      const domain = email.split('@')[1];
+      if (!email || !password || !username) {
+        return res.status(400).json({ message: 'Not all fields have been entered.' });
+      }
+      if (!validDomains.includes(domain)) {
+        return res.status(400).json({ message: 'Invalid email domain.' });
+      }
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists.' });
+      }
+      if (existingUsererp) {
+        return res.status(400).json({ message: 'ERP already exists.' });
+      }
+      
+  
+      // Send the OTP to the user's email address
+      await transporter.sendMail({
+        from: process.env.EMAIL_USERNAME,
+        to: email,
+        subject: 'OTP Verification',
+        text: `Your OTP is ${otp}.`,
+      });
+  
+      // Save the user object to the database
+      await user.save();
+
+      res.status(201).json({ message: 'User created successfully. Please check your email for the OTP.' });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: 'An error occurred.' });
+    }
+  });
+    
 
 // Signin API
 router.post('/signin', async (req, res) => {
