@@ -16,7 +16,10 @@ let userschema = new Schema({
   otp: {
     type: String
   },
-
+  verified: {
+    type: Boolean,
+    default: false
+  }
   })
 
 module.exports = mongoose.model('user',userschema)

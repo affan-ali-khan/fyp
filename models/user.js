@@ -104,10 +104,11 @@ router.post('/verify-otp', async (req, res) => {
         text: `Your OTP is ${otp}.`,
       });
   
+      
+      res.status(201).json({ message: 'User created successfully. Please check your email for the OTP.' });
+      
       // Save the user object to the database
       await user.save();
-
-      res.status(201).json({ message: 'User created successfully. Please check your email for the OTP.' });
     } catch (error) {
       console.log(error);
       res.status(500).json({ message: 'An error occurred.' });
@@ -122,7 +123,9 @@ router.post('/signin', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     const userH = await User.findOne({ email });
+    const verify = await User.findOne({ email });
     const isMatch = await bcrypt.compare(password, userH.password);
+    if (!verify.verified) return res.status(400).json({ msg: "Not Verified." });
     if (!isMatch) return res.status(400).json({ msg: "Invalid credentials." });
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
