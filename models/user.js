@@ -165,6 +165,9 @@ router.put('/users/:userId', async (req, res) => {
   const userId = req.params.userId;
   //console.log(userId)
   const { name,password} = req.body;
+  const salt = await bcrypt.genSalt();
+  const passwordHash = await bcrypt.hash(password, salt);
+   
 try {
     const user = await User.findById(userId);
     if (!user) {
@@ -172,7 +175,7 @@ try {
     }
 
     user.username = name || user.username;
-    user.password = password || user.password;
+    user.password = passwordHash;
 
     await user.save();
 
@@ -182,4 +185,33 @@ try {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.post('/forget_password', async (req, res) => {
+  const { email } = req.body;
+  const otp = otpGenerator.generate(6, { digits: true, alphabets: false, upperCase: false, specialChars: false });
+
+  try {
+    // Find the user in the database by email address
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(200).json({ message: 'no user exist' });
+    }
+    else{
+      await transporter.sendMail({
+        from: process.env.EMAIL_USERNAME,
+        to: email,
+        subject: 'password reset',
+        text: `Your OTP is ${otp}.`,
+      });
+      user.otp=otp
+      await user.save();
+      res.json({ message: 'otp sent successfully' });
+
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'An error occurred.' });
+  }
+});
+
+
 module.exports = router;
