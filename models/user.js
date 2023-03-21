@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const User = require('../schema/user');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
@@ -15,15 +14,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-
-// Connect to MongoDB
-mongoose.connect('mongodb+srv://ebadurrehman:Iba22395@fyp.sphtxvo.mongodb.net/routify', { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log('Connected to database.');
-  })
-  .catch((error) => {
-    console.log('Connection failed.');
-  });
   const validDomains = ['iba.edu.pk', 'khi.iba.edu.pk'];
 
 // Create a new transporter object for sending emails
