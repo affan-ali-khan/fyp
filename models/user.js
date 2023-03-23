@@ -116,8 +116,8 @@ router.post('/signin', async (req, res) => {
     const userH = await User.findOne({ email });
     const verify = await User.findOne({ email });
     const isMatch = await bcrypt.compare(password, userH.password);
-    if (!verify.verified) return res.status(400).json({ msg: "Not Verified." });
-    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials." });
+    if (!verify.verified) return res.status(400).json({ message: "Not Verified." });
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials." });
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
     } else {
