@@ -95,7 +95,8 @@ router.post('/verify-otp', async (req, res) => {
       });
   
       
-      res.status(201).json({ message: 'User created successfully. Please check your email for the OTP.' });
+      res.status(201).json({ message: 'User created successfully. Please check your email for the OTP.',
+    "otp":otp });
       
       // Save the user object to the database
       await user.save();
