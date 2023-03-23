@@ -139,17 +139,43 @@ router.post('/signin', async (req, res) => {
 });
 
 //Signout API
+
 router.post('/signout', async (req, res) => {
   try {
+    // Get the token from the request headers
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+
+    // Verify the token
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
     // Clear the token from the client-side by removing the token cookie
     res.clearCookie('token');
-    
+
     res.status(200).json({ message: 'Sign out successful' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+// router.post('/signout', async (req, res) => {
+//   try {
+//     // Clear the token from the client-side by removing the token cookie
+//     res.clearCookie('token');
+    
+//     res.status(200).json({ message: 'Sign out successful' });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
 
 //edit user
 router.put('/users/:userId', async (req, res) => {
