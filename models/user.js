@@ -127,7 +127,7 @@ router.post('/signin', async (req, res) => {
       }, 
       process.env.JWT_KEY, 
       {
-        expiresIn: "1h"
+        expiresIn: "24h"
       },
       );
       res.status(200).json({ message: 'Sign in successful', token: token, userid: user._id });
@@ -142,8 +142,9 @@ router.post('/signin', async (req, res) => {
 
 router.post('/signout', async (req, res) => {
   try {
+    console.log(req.headers)
     // Get the token from the request headers
-    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+    const token = req.headers.authorization.split(' ')[1];
 
     // Verify the token
     if (!token) {
