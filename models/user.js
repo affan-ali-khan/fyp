@@ -158,7 +158,7 @@ router.post('/signout', auth, async (req, res) => {
   try {
     // find the user by email and delete the session token
     const user = await User.findOneAndUpdate({ email: req.user.email }, { sessionToken: '' });
-    res.status(200).json({ success: true });
+    res.status(200).json({ message: "signout successful" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
