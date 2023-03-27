@@ -228,5 +228,18 @@ router.post('/forget_password', async (req, res) => {
   }
 });
 
+//get all users
+
+router.get('/allusers', async (req, res) => {
+  const users = await User.find();
+  try{
+    res.send(users);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'An error occurred.' });
+  }
+
+})
+
 
 module.exports = router;
