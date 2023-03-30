@@ -200,6 +200,8 @@ try {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
 router.post('/forget_password', async (req, res) => {
   const { email } = req.body;
   const otp = otpGenerator.generate(6, { digits: true, alphabets: false, upperCase: false, specialChars: false });
@@ -240,6 +242,39 @@ router.get('/allusers', async (req, res) => {
   }
 
 })
+
+//schedule
+
+router.post('/users/:id/schedule', async (req, res) => {
+  const id = req.params.id;
+  const { day, start_time, end_time, campus } = req.body;
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    if (!Array.isArray(user.schedule) || !user.schedule) {
+      user.schedule = [];
+    }
+    
+    let courseTime = {
+      day,
+      start: start_time,
+      end: end_time,
+      campus
+    };
+
+    user.schedule.push(courseTime);
+
+    
+    await user.save();
+    
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
 
 
 module.exports = router;
