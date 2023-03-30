@@ -276,5 +276,56 @@ router.post('/users/:id/schedule', async (req, res) => {
   }
 });
 
+router.put('/users/shedule/:user_id/:schedule_id', async (req, res) => {
+  const userId=req.params.user_id
+  const sch_Id = req.params.schedule_id;
+  const {start_time, end_time, start_campus,end_campus,role } = req.body;
+  try {
+    const user = await User.findById(userId);
+    //const schedule= await user.schedule.find(sch_Id)
+    const id = user.schedule[0]["_id"];
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    if (sch_Id!=id) {
+      return res.status(404).json({ message: 'schedule not found' });
+    }
+    user.schedule[0]["start"]=start_time
+    user.schedule[0]["end"]=end_time
+    user.schedule[0]["start_campus"]=start_campus
+    user.schedule[0]["end_campus"]=end_campus
+    user.schedule[0]["role"]=role
+    await user.save()
+    res.json(user.schedule);
+  }
+
+  catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+})
+
+router.get('/allshedule/:userId/:sheduleId', async (req, res) => {
+  const userId=req.params.userId
+  const sch_Id = req.params.sheduleId;
+  const user = await User.findById(userId);
+  const id = user.schedule[0]["_id"];
+
+  try{
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    if (sch_Id!=id) {
+      return res.status(404).json({ message: 'schedule not found' });
+    }
+    res.json(user.schedule)
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'An error occurred.' });
+  }
+
+})
+
 
 module.exports = router;
