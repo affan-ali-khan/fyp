@@ -3,21 +3,36 @@ const Schema = mongoose.Schema;
 const scheduleSchema = new Schema({
   day: {
     type: String,
-    required: true
+    //required: true
   },
   start: {
     type: String,
-    required: true
+    //required: true
   },
   end: {
     type: String,
-    required: true
+    //required: true
   },
-  campus: {
+  start_campus: {
     type: String,
-    enum: ['campus1', 'campus2'],
-    required: true
+    enum: ['main', 'city'],
+    //required: true
+  },
+  end_campus: {
+    type: String,
+    enum: ['main', 'city'],
+    //required: true
+  },
+  role: {
+    type: String,
+    enum: ['driver', 'passenger'],
+    //required: true
+  },
+  flag:{
+    type:Boolean,
+    default:false
   }
+
 });
 
 let userschema = new Schema({
@@ -42,7 +57,17 @@ let userschema = new Schema({
   verified: {
     type: Boolean,
     default: false
-  }
+  },
+  location:[
+    {
+     latitude:{
+       type:String
+     }, 
+     longitude:{
+      type:String
+    }  
+    }
+  ]
   })
 
 module.exports = mongoose.model('user',userschema)
