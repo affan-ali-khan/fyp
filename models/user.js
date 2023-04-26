@@ -8,7 +8,6 @@ const dotenv = require('dotenv').config();
 const JWT_KEY = process.env.JWT_KEY;
 const otpGenerator = require('otp-generator');
 const nodemailer = require('nodemailer');
-//const bcrypt = require("bcryptjs");
 
 const app = express();
 app.use(bodyParser.json());
@@ -95,8 +94,7 @@ router.post('/verify-otp', async (req, res) => {
       });
   
       
-      res.status(201).json({ message: 'User created successfully. Please check your email for the OTP.',
-    "otp":otp });
+      res.status(201).json({ message: 'User created successfully. Please check your email for the OTP.' });
       
       // Save the user object to the database
       await user.save();
@@ -116,8 +114,8 @@ router.post('/signin', async (req, res) => {
     const userH = await User.findOne({ email });
     const verify = await User.findOne({ email });
     const isMatch = await bcrypt.compare(password, userH.password);
-    if (!verify.verified) return res.status(400).json({ message: "Not Verified." });
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials." });
+    if (!verify.verified) return res.status(400).json({ msg: "Not Verified." });
+    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials." });
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
     } else {
@@ -127,10 +125,10 @@ router.post('/signin', async (req, res) => {
       }, 
       process.env.JWT_KEY, 
       {
-        expiresIn: "24h"
+        expiresIn: "1h"
       },
       );
-      res.status(200).json({ message: 'Sign in successful', token: token, userid: user._id });
+      res.status(200).json({ message: 'Sign in successful', token: token });
     }
   } catch (err) {
     console.error(err);
@@ -138,7 +136,8 @@ router.post('/signin', async (req, res) => {
   }
 });
 
-//Signout API
+
+//Sign Out API
 const auth = (req, res, next) => {
   const header = req.header('Authorization');
   if (!header) {
@@ -158,22 +157,11 @@ router.post('/signout', auth, async (req, res) => {
   try {
     // find the user by email and delete the session token
     const user = await User.findOneAndUpdate({ email: req.user.email }, { sessionToken: '' });
-    res.status(200).json({ message: "signout successful" });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
-// router.post('/signout', async (req, res) => {
-//   try {
-//     // Clear the token from the client-side by removing the token cookie
-//     res.clearCookie('token');
-    
-//     res.status(200).json({ message: 'Sign out successful' });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: 'Server error' });
-//   }
-// });
 
 //edit user
 router.put('/users/:userId', async (req, res) => {
@@ -200,8 +188,6 @@ try {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
-
 router.post('/forget_password', async (req, res) => {
   const { email } = req.body;
   const otp = otpGenerator.generate(6, { digits: true, alphabets: false, upperCase: false, specialChars: false });
@@ -229,9 +215,6 @@ router.post('/forget_password', async (req, res) => {
     res.status(500).json({ message: 'An error occurred.' });
   }
 });
-
-//get all users
-
 router.get('/allusers', async (req, res) => {
   const users = await User.find();
   try{
@@ -243,11 +226,10 @@ router.get('/allusers', async (req, res) => {
 
 })
 
-//schedule
 
 router.post('/users/:id/schedule', async (req, res) => {
   const id = req.params.id;
-  const { day, start_time, end_time, campus } = req.body;
+  const { day, start_time, end_time, start_campus,end_campus,role } = req.body;
   try {
     const user = await User.findById(id);
     if (!user) {
@@ -256,46 +238,43 @@ router.post('/users/:id/schedule', async (req, res) => {
     if (!Array.isArray(user.schedule) || !user.schedule) {
       user.schedule = [];
     }
-    
     let courseTime = {
       day,
       start: start_time,
       end: end_time,
-      campus
+      start_campus:start_campus,
+      end_campus:end_campus,
+      role:role,
+      flag:true
     };
-
     user.schedule.push(courseTime);
-
-    
     await user.save();
-    
     res.json(user);
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
   }
 });
-
-router.put('/users/shedule/:user_id/:schedule_id', async (req, res) => {
+//edit schedule
+router.put('/users/shedule/:user_id/:day', async (req, res) => {
   const userId=req.params.user_id
-  const sch_Id = req.params.schedule_id;
+  const day = req.params.day;
+
   const {start_time, end_time, start_campus,end_campus,role } = req.body;
-  try {
+  
     const user = await User.findById(userId);
-    //const schedule= await user.schedule.find(sch_Id)
-    const id = user.schedule[0]["_id"];
-    
+    const id = user.schedule[1]["_id"];
+    const daySch = user.schedule.filter(schedule => schedule.day === day);
+    //console.log(mondaySch[0].start)
+    try{
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    if (sch_Id!=id) {
-      return res.status(404).json({ message: 'schedule not found' });
-    }
-    user.schedule[0]["start"]=start_time
-    user.schedule[0]["end"]=end_time
-    user.schedule[0]["start_campus"]=start_campus
-    user.schedule[0]["end_campus"]=end_campus
-    user.schedule[0]["role"]=role
+    daySch[0].start=start_time
+    daySch[0].end=end_time
+    daySch[0].start_campus=start_campus
+    daySch[0].end_campus=end_campus
+    daySch[0].role=role
     await user.save()
     res.json(user.schedule);
   }
@@ -305,7 +284,7 @@ router.put('/users/shedule/:user_id/:schedule_id', async (req, res) => {
     res.status(500).send("Server Error");
   }
 })
-
+  
 router.get('/allshedule/:userId/:sheduleId', async (req, res) => {
   const userId=req.params.userId
   const sch_Id = req.params.sheduleId;
@@ -326,6 +305,46 @@ router.get('/allshedule/:userId/:sheduleId', async (req, res) => {
   }
 
 })
+///DAY
+router.get('/day/:userId/:day', async (req, res) => {
+  const day=req.params.day
+  const userId=req.params.userId
+  const users = await User.findById(userId);
+  const shedule=users.schedule
+  var rday=[];
+  for (let i=0; i< shedule.length; i++){
+    if(
+      shedule[i].day=day
+    )
+    rday=shedule[i]
+  }
+   try{
 
+      res.send(rday)
+   } catch (error) {
+     console.log(error);
+     res.status(500).json({ message: 'An error occurred.' });
+   }
+})
+router.post('/:userId/location', async (req, res) => {
+  const { latitude, longitude } = req.body;
+  const userId=req.params.userId
+
+  try {
+    const user = await User.findById(userId);
+    //const user = await UserLocation.create({ userId, latitude, longitude });
+   // res.status(201).json(userLocation);
+  // console.log(user)
+   user.location.push({
+     latitude:latitude,
+     longitude:longitude
+   })
+   res.send(" saved user location" );
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Failed to save user location' });
+  }
+});
 
 module.exports = router;
