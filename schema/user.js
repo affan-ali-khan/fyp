@@ -15,12 +15,12 @@ const scheduleSchema = new Schema({
   },
   start_campus: {
     type: String,
-    enum: ['main', 'city'],
+    enum: ['Main Campus', 'City Campus'],
     //required: true
   },
   end_campus: {
     type: String,
-    enum: ['main', 'city'],
+    enum: ['Main Campus', 'City Campus'],
     //required: true
   },
   role: {
