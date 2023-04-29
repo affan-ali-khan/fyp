@@ -331,26 +331,35 @@ router.get('/day/:userId/:day', async (req, res) => {
 })
 router.post('/:userId/location', async (req, res) => {
   const { latitude, longitude } = req.body;
-  const userId=req.params.userId
+  const userId = req.params.userId;
 
   try {
     const user = await User.findById(userId);
-    //const user = await UserLocation.create({ userId, latitude, longitude });
-   // res.status(201).json(userLocation);
-  // console.log(user)
-   user.location.push({
-     latitude:latitude,
-     longitude:longitude
-   })
-   res.send(" saved user location" );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const existingLocation = user.location.find(loc => loc.latitude === latitude && loc.longitude === longitude);
+
+    if (existingLocation) {
+      return res.status(400).json({ error: 'Location already exists for the user' });
+    }
+
+    user.location.push({
+      latitude: latitude,
+      longitude: longitude
+    });
+
+    await user.save();
+
+    res.send('Saved user location');
 
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: 'Failed to save user location' });
   }
 });
-
-
 // // Define the Google Maps API key
 // const API_KEY = 'AIzaSyDvGu0s5AniaCriuxDEYyHA53KqUdNOSbI';
 
