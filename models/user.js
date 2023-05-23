@@ -472,7 +472,8 @@ router.post('/:userId/location', async (req, res) => {
 // console.error(error);
 // });
 
-router.get('/matches/:userid/:day', async (req, res) => {
+//Matches API for going to uni
+router.get('/matches_uni/:userid/:day', async (req, res) => {
   const userid=req.params.userid
   const user = await User.findById(userid)
   const day=req.params.day
@@ -496,36 +497,58 @@ router.get('/matches/:userid/:day', async (req, res) => {
   }
   
   start_time = uday.start
-  console.log(start_time)
-  console.log(uday)
+  //console.log(start_time)
+  //console.log(uday)
   start_campus = uday.start_campus
   role = uday.role
 
  try {
    if(role == 'driver'){
-     users = await User.find({'schedule.day':day, 'schedule.start': start_time, 'schedule.start_campus': start_campus, 'schedule.role': 'passenger' },{location:1,_id:0});
+     users = await User.find({
+       schedule: {
+         $elemMatch: {
+           day: day,
+           start: start_time,
+           start_campus: start_campus,
+           role: 'passenger'
+         }
+       }
+     }, { location: 1, _id: 0 });
    }
    else{
-     users = await User.find({'schedule.day':day, 'schedule.start': start_time, 'schedule.start_campus': start_campus },{location:1,_id:0});
+     users = await User.find({
+       schedule: {
+         $elemMatch: {
+           day: day,
+           start: start_time,
+           start_campus: start_campus,
+           $or: [
+             { role: 'driver' },
+             { role: 'passenger' } // Replace 'anotherRole' with the desired role
+           ]
+         }
+       }
+     }, { location: 1, _id: 0 });
    }
-   console.log(users)
-   console.log(user.location[0].latitude)
-   const locations = users.map(user => user.location[0]); // getting only the first location of each user
-   const coordinates = locations.map(location => ({
+   //console.log(users)
+  // console.log(user.location[0].latitude)
+  
+  const locations = users.map(user => user.location[0]); // getting only the first location of each user
+  
+  const coordinates = locations.map(location => ({
      lat: parseFloat(location.latitude),
      lng: parseFloat(location.longitude)
    }));
-
-   if(coordinates.length < 2){
+   console.log(coordinates)
+   if(coordinates.length < 1){
      res.send("no one is available")
    }else{
      
    getCoordinatesWithin3km(user_lat, user_lng, destLat, destLng, coordinates, process.env.API_KEY)
  .then(async (filteredCoordinates) => {
-   //console.log(filteredCoordinates);
    matches = filteredCoordinates;
-   console.log(matches)
-   console.log(matches.length)
+   //console.log(matches)
+   //console.log(matches.length)
    
    // assuming response is the JSON object you received
    const latitudes = [];
@@ -542,7 +565,7 @@ router.get('/matches/:userid/:day', async (req, res) => {
    filtered_users = await User.find({
      'location.latitude': { $in: latitudes },
      'location.longitude': { $in: longitudes }
-   }, {email: 1, username: 1, erp: 1, location: 1, _id: 0});
+   }, {email: 1, username: 1, erp: 1, location: 1, _id: 1});
    console.log(filtered_users)
    res.json({ filtered_users });
  })
@@ -559,40 +582,264 @@ router.get('/matches/:userid/:day', async (req, res) => {
 });
 
 //Matches API for going to home
-router.get('/matches/:userid/:day', async (req, res) => {
-  const userid=req.params.userid
-  const user = await User.findById(userid)
-  const day=req.params.day
-  const schedule=user.schedule
-  var uday;
-  var end_time;
-  var end_campus;
-  var role;
-  var users;
-  for(let i=0; i<schedule.length; i++){
-    if(schedule[i].day==day){
-      uday=schedule[i]
-    }
+router.get('/matches_home/:userid/:day', async (req, res) => {
+ const userid=req.params.userid
+ const user = await User.findById(userid)
+ const day=req.params.day
+ const schedule=user.schedule
+ var uday;
+ var end_time;
+ var end_campus;
+ var role;
+ var users;
+ const user_lat = user.location[0].latitude;
+ const user_lng = user.location[0].longitude;
+ const destLat = "24.9396119";
+ const destLng = "67.1142199";
+ let matches;
+ let filtered_users;
+
+ for(let i=0; i<schedule.length; i++){
+   if(schedule[i].day==day){
+     uday=schedule[i]
+   }
+ }
+ 
+ end_time = uday.end
+ //console.log(start_time)
+ //console.log(uday)
+ end_campus = uday.end_campus
+ role = uday.role
+
+try {
+  if(role == 'driver'){
+    users = await User.find({
+      schedule: {
+        $elemMatch: {
+          day: day,
+          end: end_time,
+          end_campus: end_campus,
+          role: 'passenger'
+        }
+      }
+    }, { location: 1, _id: 0 });
+  }
+  else{
+    users = await User.find({
+      schedule: {
+        $elemMatch: {
+          day: day,
+          end: end_time,
+          end_campus: end_campus,
+          //role: 'passenger'
+        }
+      }
+    }, { location: 1, _id: 0 });
+  }
+  //console.log(users)
+ // console.log(user.location[0].latitude)
+ 
+ const locations = users.map(user => user.location[0]); // getting only the first location of each user
+ 
+ const coordinates = locations.map(location => ({
+    lat: parseFloat(location.latitude),
+    lng: parseFloat(location.longitude)
+  }));
+  //console.log(coordinates)
+  if(coordinates.length < 2){
+    res.send("no one is available")
+  }else{
+    
+  getCoordinatesWithin3km(user_lat, user_lng, destLat, destLng, coordinates, process.env.API_KEY)
+.then(async (filteredCoordinates) => {
+  matches = filteredCoordinates;
+  //console.log(matches)
+  //console.log(matches.length)
+  
+  // assuming response is the JSON object you received
+  const latitudes = [];
+  const longitudes = [];
+  
+
+  for (let i = 0; i < matches.length; i++) {
+    latitudes.push(matches[i].lat);
+    longitudes.push(matches[i].lng);
+  }
+  console.log(latitudes)
+  //res.json({ matches });
+
+  filtered_users = await User.find({
+    'location.latitude': { $in: latitudes },
+    'location.longitude': { $in: longitudes }
+  }, {email: 1, username: 1, erp: 1, location: 1, _id: 1});
+  console.log(filtered_users)
+  res.json({ filtered_users });
+})
+.catch((error) => {
+  console.error(error);
+});
   }
   
-  end_time = uday.end
-  end_campus = uday.end_campus
-  role = uday.role
 
+} catch (error) {
+  console.error(error);
+  res.status(500).send('Error');
+}
+});
+
+//Request Coming API
+router.post('/requestcoming/:userid/:day', async (req, res) => {
+ const userid=req.params.userid;
+ const day=req.params.day;
+ const { s_userid } = req.body;
+ const s_user = await User.findById(s_userid);
+ const user = await User.findById(userid);
+ const daySch = user.schedule.filter(schedule => schedule.day === day);
+ const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
  try {
-   if(role == 'driver'){
-     users = await User.find({'schedule.day':day, 'schedule.end': end_time, 'schedule.end_campus': end_campus, 'schedule.role': 'passenger' },{email:1,_id:0});
-   }
-   else{
-     users = await User.find({'schedule.day':day, 'schedule.end': end_time, 'schedule.end_campus': end_campus },{email:1,_id:0});
-   }
-   
-   const emails=users.map(user=>user.email);
-   res.send(emails)
-   //res.send("no one is available")
+   daySch[0].request_sent.push({
+     id: s_userid,
+     username: s_user.username,
+     email: s_user.email,
+     erp: s_user.erp
+   });
+   //S_daySch[0].request_coming = userid;
+   S_daySch[0].request_coming.push({
+     id: userid,
+     username: user.username,
+     email: user.email,
+     erp: user.erp
+   });
+   console.log(S_daySch[0]);
+   await user.save();
+   await s_user.save();
+   res.send('request sent')
  } catch (error) {
    console.error(error);
-   res.status(500).send('Error');
+   res.status(500).send('Error retrieving directions');
+ }
+});
+//Request Going API
+router.post('/requestgoing/:userid/:day', async (req, res) => {
+ const userid=req.params.userid;
+ const day=req.params.day;
+ const { s_userid } = req.body;
+ const s_user = await User.findById(s_userid);
+ const user = await User.findById(userid);
+ const daySch = user.schedule.filter(schedule => schedule.day === day);
+ const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+ try {
+   // daySch[0].request_going = s_userid;
+   daySch[0].request_sent.push({
+     id: s_userid,
+     username: s_user.username,
+     email: s_user.email,
+     erp: s_user.erp
+   });
+   S_daySch[0].request_going = userid;
+   await user.save();
+   await s_user.save();
+   res.send('request sent')
+ } catch (error) {
+   console.error(error);
+   res.status(500).send('Error retrieving directions');
+ }
+});
+
+//Accept Going API
+router.post('/acceptgoing/:userid/:day', async (req, res) => {
+ const userid=req.params.userid;
+ const day=req.params.day;
+ const { s_userid } = req.body;
+ const s_user = await User.findById(s_userid);
+ const user = await User.findById(userid);
+ const daySch = user.schedule.filter(schedule => schedule.day === day);
+ const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+
+ var available_id;
+
+ try{
+
+   if(daySch[0].request_going.length>0){
+   for ( i = 0; i < daySch[0].request_going.length; i++) {
+     if(daySch[0].request_going[i]==s_userid){
+     available_id = daySch[0].request_going[i];
+     }
+     else {
+       res.status(500).send('No user with this req');
+     }
+   }
+   
+   S_daySch[0].accept_going = userid;
+   console.log(available_id)
+   let index = daySch[0].request_going.indexOf(available_id);
+   console.log(index)
+// Remove the element if found
+if (index !== -1) {
+ daySch[0].request_going.splice(index, 1);
+}
+
+   await user.save();
+   await s_user.save()
+   res.send('request ok')
+
+ }
+
+else {
+ res.send('No req exist');
+}
+ }
+  catch (error) {
+   console.error(error);
+   res.status(500).send('Error retrieving req');
+ }
+});
+//Accept coming API
+router.post('/acceptcoming/:userid/:day', async (req, res) => {
+ const userid=req.params.userid;
+ const day=req.params.day;
+ const { s_userid } = req.body;
+ const s_user = await User.findById(s_userid);
+ const user = await User.findById(userid);
+ const daySch = user.schedule.filter(schedule => schedule.day === day);
+ const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+
+ var available_id;
+
+ try{
+
+   if(daySch[0].request_coming.length>0){
+   for ( i = 0; i < daySch[0].request_coming.length; i++) {
+     if(daySch[0].request_coming[i]==s_userid){
+     available_id = daySch[0].request_coming[i];
+     }
+     else {
+       res.status(500).send('No user with this req');
+     }
+   }
+   
+   S_daySch[0].accept_coming = userid;
+   console.log(available_id)
+   let index = daySch[0].request_coming.indexOf(available_id);
+   console.log(index)
+// Remove the element if found
+if (index !== -1) {
+ daySch[0].request_coming.splice(index, 1);
+}
+
+   await user.save();
+   await s_user.save()
+   res.send('request ok')
+
+ }
+
+else {
+ res.send('No req exist');
+}
+ }
+  catch (error) {
+   console.error(error);
+   res.status(500).send('Error retrieving req');
  }
 });
 
@@ -699,5 +946,6 @@ function getDistanceToSegment(x1, y1, x2, y2, x3, y3) {
 
  return Math.sqrt(dx * dx + dy * dy) * 111.319;
  }
+
 
 module.exports = router;
