@@ -31,8 +31,54 @@ const scheduleSchema = new Schema({
   flag:{
     type:Boolean,
     default:false
-  }
-
+  },
+  request_coming:[
+    {
+     id:{
+       type:String
+     }, 
+     username:{
+      type:String
+    },
+    email:{
+      type:String
+    }, 
+    erp:{
+      type:String
+    },
+    }
+  ],
+  request_going:[
+    {
+      type: String
+    }
+  ],
+  accept_coming:[
+    {
+      type: String
+    }
+  ],
+  accept_going:[
+    {
+      type: String
+    }
+  ], 
+  request_sent:[
+    {
+     id:{
+       type:String
+     }, 
+     username:{
+      type:String
+    },
+    email:{
+      type:String
+    }, 
+    erp:{
+      type:String
+    },
+    }
+  ]
 });
 
 let userschema = new Schema({
@@ -58,6 +104,9 @@ let userschema = new Schema({
     type: Boolean,
     default: false
   },
+  contact: {
+    type: String
+  },
   location:[
     {
      latitude:{
@@ -69,5 +118,4 @@ let userschema = new Schema({
     }
   ]
   })
-
 module.exports = mongoose.model('user',userschema)
