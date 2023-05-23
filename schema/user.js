@@ -50,8 +50,19 @@ const scheduleSchema = new Schema({
   ],
   request_going:[
     {
-      type: String
-    }
+      id:{
+        type:String
+      }, 
+      username:{
+       type:String
+     },
+     email:{
+       type:String
+     }, 
+     erp:{
+       type:String
+     },
+     }
   ],
   accept_coming:[
     {
