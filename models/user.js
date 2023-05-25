@@ -791,100 +791,186 @@ router.post('/requestgoing/:userid/:day', async (req, res) => {
 
 //Accept Going API
 router.post('/acceptgoing/:userid/:day', async (req, res) => {
- const userid=req.params.userid;
- const day=req.params.day;
- const { s_userid } = req.body;
- const s_user = await User.findById(s_userid);
- const user = await User.findById(userid);
- const daySch = user.schedule.filter(schedule => schedule.day === day);
- const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
-
- var available_id;
-
- try{
-
-   if(daySch[0].request_going.length>0){
-   for ( i = 0; i < daySch[0].request_going.length; i++) {
-     if(daySch[0].request_going[i]==s_userid){
-     available_id = daySch[0].request_going[i];
-     }
-     else {
-       res.status(500).send('No user with this req');
-     }
-   }
-   
-   S_daySch[0].accept_going = userid;
-   console.log(available_id)
-   let index = daySch[0].request_going.indexOf(available_id);
-   console.log(index)
-// Remove the element if found
-if (index !== -1) {
- daySch[0].request_going.splice(index, 1);
+  const userid=req.params.userid;
+  const day=req.params.day;
+  const { s_userid } = req.body;
+  const s_user = await User.findById(s_userid);
+  const user = await User.findById(userid);
+  const daySch = user.schedule.filter(schedule => schedule.day === day);
+  const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+  //console.log(S_daySch[0].request_going)
+  //daySch[0].request_going[0]=[]
+for (let i = 0; i < S_daySch[0].request_sent.length; i++) {
+  if (S_daySch[0].request_sent[i].erp ==user.erp) {
+    S_daySch[0].request_sent.splice(i, 1);
+    break;
+  }
 }
 
-   await user.save();
-   await s_user.save()
-   res.send('request ok')
+for (let i = 0; i < daySch[0].request_going.length; i++) {
+  if (daySch[0].request_going[i].erp == s_user.erp) {
+    daySch[0].request_going.splice(i, 1);
+    break;
+  }
+} 
 
- }
 
-else {
- res.send('No req exist');
-}
- }
-  catch (error) {
-   console.error(error);
-   res.status(500).send('Error retrieving req');
- }
+daySch[0].accept_going.push({
+  id: s_userid,
+  username: s_user.username,
+  email: s_user.email,
+  erp: s_user.erp
+});
+await user.save();
+await s_user.save();
+res.send(daySch[0].accept_going)
+
 });
 //Accept coming API
 router.post('/acceptcoming/:userid/:day', async (req, res) => {
- const userid=req.params.userid;
- const day=req.params.day;
- const { s_userid } = req.body;
- const s_user = await User.findById(s_userid);
- const user = await User.findById(userid);
- const daySch = user.schedule.filter(schedule => schedule.day === day);
- const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+  const userid=req.params.userid;
+  const day=req.params.day;
+  const { s_userid } = req.body;
+  const s_user = await User.findById(s_userid);
+  const user = await User.findById(userid);
+  const daySch = user.schedule.filter(schedule => schedule.day === day);
+  const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
 
- var available_id;
+  var available_id;
 
- try{
+  try{
 
-   if(daySch[0].request_coming.length>0){
-   for ( i = 0; i < daySch[0].request_coming.length; i++) {
-     if(daySch[0].request_coming[i]==s_userid){
-     available_id = daySch[0].request_coming[i];
-     }
-     else {
-       res.status(500).send('No user with this req');
-     }
-   }
-   
-   S_daySch[0].accept_coming = userid;
-   console.log(available_id)
-   let index = daySch[0].request_coming.indexOf(available_id);
-   console.log(index)
+    if(daySch[0].request_coming.length>0){
+    for ( i = 0; i < daySch[0].request_coming.length; i++) {
+      if(daySch[0].request_coming[i]==s_userid){
+      available_id = daySch[0].request_coming[i];
+      }
+      else {
+       return res.json({ message: 'no req' });
+
+        
+      }
+    }
+    
+    S_daySch[0].accept_coming = userid;
+    console.log(available_id)
+    let index = daySch[0].request_coming.indexOf(available_id);
+    console.log(index)
 // Remove the element if found
 if (index !== -1) {
- daySch[0].request_coming.splice(index, 1);
+  daySch[0].request_coming.splice(index, 1);
 }
 
-   await user.save();
-   await s_user.save()
-   res.send('request ok')
+    await user.save();
+    await s_user.save()
+    res.send('request ok')
 
- }
+  }
 
 else {
- res.send('No req exist');
+  res.send('No req exist');
 }
- }
-  catch (error) {
-   console.error(error);
-   res.status(500).send('Error retrieving req');
- }
+  }
+   catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving req');
+  }
 });
+// router.post('/acceptgoing/:userid/:day', async (req, res) => {
+//  const userid=req.params.userid;
+//  const day=req.params.day;
+//  const { s_userid } = req.body;
+//  const s_user = await User.findById(s_userid);
+//  const user = await User.findById(userid);
+//  const daySch = user.schedule.filter(schedule => schedule.day === day);
+//  const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+
+//  var available_id;
+
+//  try{
+
+//    if(daySch[0].request_going.length>0){
+//    for ( i = 0; i < daySch[0].request_going.length; i++) {
+//      if(daySch[0].request_going[i]==s_userid){
+//      available_id = daySch[0].request_going[i];
+//      }
+//      else {
+//        res.status(500).send('No user with this req');
+//      }
+//    }
+   
+//    S_daySch[0].accept_going = userid;
+//    console.log(available_id)
+//    let index = daySch[0].request_going.indexOf(available_id);
+//    console.log(index)
+// // Remove the element if found
+// if (index !== -1) {
+//  daySch[0].request_going.splice(index, 1);
+// }
+
+//    await user.save();
+//    await s_user.save()
+//    res.send('request ok')
+
+//  }
+
+// else {
+//  res.send('No req exist');
+// }
+//  }
+//   catch (error) {
+//    console.error(error);
+//    res.status(500).send('Error retrieving req');
+//  }
+// });
+// //Accept coming API
+// router.post('/acceptcoming/:userid/:day', async (req, res) => {
+//  const userid=req.params.userid;
+//  const day=req.params.day;
+//  const { s_userid } = req.body;
+//  const s_user = await User.findById(s_userid);
+//  const user = await User.findById(userid);
+//  const daySch = user.schedule.filter(schedule => schedule.day === day);
+//  const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+
+//  var available_id;
+
+//  try{
+
+//    if(daySch[0].request_coming.length>0){
+//    for ( i = 0; i < daySch[0].request_coming.length; i++) {
+//      if(daySch[0].request_coming[i]==s_userid){
+//      available_id = daySch[0].request_coming[i];
+//      }
+//      else {
+//        res.status(500).send('No user with this req');
+//      }
+//    }
+   
+//    S_daySch[0].accept_coming = userid;
+//    console.log(available_id)
+//    let index = daySch[0].request_coming.indexOf(available_id);
+//    console.log(index)
+// // Remove the element if found
+// if (index !== -1) {
+//  daySch[0].request_coming.splice(index, 1);
+// }
+
+//    await user.save();
+//    await s_user.save()
+//    res.send('request ok')
+
+//  }
+
+// else {
+//  res.send('No req exist');
+// }
+//  }
+//   catch (error) {
+//    console.error(error);
+//    res.status(500).send('Error retrieving req');
+//  }
+// });
 
 
 //Function to get Matches
@@ -903,7 +989,7 @@ async function getCoordinatesWithin3km(startLat, startLng, endLat, endLng, coord
 
  const filteredCoordinates = coordinates.filter((coordinate) => {
    const distance = getDistanceFromRoute(routeCoordinates, coordinate);
-   return distance <= 10;
+   return distance <= 5;
  });
 
  return filteredCoordinates;
