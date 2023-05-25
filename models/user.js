@@ -989,7 +989,7 @@ async function getCoordinatesWithin3km(startLat, startLng, endLat, endLng, coord
 
  const filteredCoordinates = coordinates.filter((coordinate) => {
    const distance = getDistanceFromRoute(routeCoordinates, coordinate);
-   return distance <= 5;
+   return distance <= 4;
  });
 
  return filteredCoordinates;
