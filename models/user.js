@@ -474,13 +474,141 @@ router.post('/:userId/location', async (req, res) => {
 
 //Matches API for going to uni
 router.get('/matches_uni/:userid/:day', async (req, res) => {
+   const userid=req.params.userid
+   const user = await User.findById(userid)
+   const day=req.params.day
+   const schedule=user.schedule
+   var uday;
+   var start_time;
+   var start_campus;
+   var role;
+   var users;
+   const user_lat = user.location[0].latitude;
+   const user_lng = user.location[0].longitude;
+   const destLat = "24.9396119";
+   const destLng = "67.1142199";
+   let matches;
+   let filtered_users;
+  
+   for(let i=0; i<schedule.length; i++){
+     if(schedule[i].day==day){
+       uday=schedule[i]
+     }
+   }
+   
+   start_time = uday.start
+   //console.log(start_time)
+   //console.log(uday)
+   start_campus = uday.start_campus
+   role = uday.role
+
+  try {
+    if(role == 'driver'){
+      users = await User.find({
+        schedule: {
+          $elemMatch: {
+            day: day,
+            start: start_time,
+            start_campus: start_campus,
+            role: 'passenger'
+          }
+        }
+      }, { location: 1, _id: 0 });
+    }
+    else{
+      users = await User.find({
+        schedule: {
+          $elemMatch: {
+            day: day,
+            start: start_time,
+            start_campus: start_campus,
+            $or: [
+              { role: 'driver' },
+              { role: 'passenger' } // Replace 'anotherRole' with the desired role
+            ]
+          }
+        }
+      }, { location: 1, _id: 0 });
+    }
+    //console.log(users)
+   // console.log(user.location[0].latitude)
+   
+  //  const locations = users.map(user => user.location[0]); // getting only the first location of each user
+  //  console.log(locations);
+  //  const coordinates = locations.map(location => ({
+  //     lat: parseFloat(location.latitude),
+  //     lng: parseFloat(location.longitude)
+  //   }));
+  const locations = users.map(user => {
+    if (user.location && user.location[0] && user.location[0].latitude) {
+      return user.location[0];
+    } else {
+      return null;
+    }
+  });
+  
+  //console.log(locations);
+  
+  const coordinates = locations
+    .filter(location => location !== null)
+    .map(location => ({
+      lat: parseFloat(location.latitude),
+      lng: parseFloat(location.longitude)
+    }));
+  
+  //console.log(coordinates);
+  
+    //console.log(coordinates)
+    if(coordinates.length < 1){
+      res.send("no one is available")
+    }else{
+      
+    getCoordinatesWithin3km(user_lat, user_lng, destLat, destLng, coordinates, process.env.API_KEY)
+  .then(async (filteredCoordinates) => {
+    matches = filteredCoordinates;
+    //console.log(matches)
+    //console.log(matches.length)
+    
+    // assuming response is the JSON object you received
+    const latitudes = [];
+    const longitudes = [];
+    
+
+    for (let i = 0; i < matches.length; i++) {
+      latitudes.push(matches[i].lat);
+      longitudes.push(matches[i].lng);
+    }
+    //console.log(latitudes)
+    //res.json({ matches });
+
+    filtered_users = await User.find({
+      'location.latitude': { $in: latitudes },
+      'location.longitude': { $in: longitudes }
+    }, {email: 1, username: 1, erp: 1, location: 1,contact:1, _id:1 ,'schedule.role':1 });
+    //console.log(filtered_users[0])
+    res.json({ filtered_users });
+  })
+  .catch((error) => {
+    console.error(error);
+  });
+    }
+    
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error');
+  }
+});
+
+//Matches API for going to home
+router.get('/matches_home/:userid/:day', async (req, res) => {
   const userid=req.params.userid
   const user = await User.findById(userid)
   const day=req.params.day
   const schedule=user.schedule
   var uday;
-  var start_time;
-  var start_campus;
+  var end_time;
+  var end_campus;
   var role;
   var users;
   const user_lat = user.location[0].latitude;
@@ -496,10 +624,10 @@ router.get('/matches_uni/:userid/:day', async (req, res) => {
     }
   }
   
-  start_time = uday.start
+  end_time = uday.end
   //console.log(start_time)
   //console.log(uday)
-  start_campus = uday.start_campus
+  end_campus = uday.end_campus
   role = uday.role
 
  try {
@@ -508,8 +636,8 @@ router.get('/matches_uni/:userid/:day', async (req, res) => {
        schedule: {
          $elemMatch: {
            day: day,
-           start: start_time,
-           start_campus: start_campus,
+           end: end_time,
+           end_campus: end_campus,
            role: 'passenger'
          }
        }
@@ -520,12 +648,9 @@ router.get('/matches_uni/:userid/:day', async (req, res) => {
        schedule: {
          $elemMatch: {
            day: day,
-           start: start_time,
-           start_campus: start_campus,
-           $or: [
-             { role: 'driver' },
-             { role: 'passenger' } // Replace 'anotherRole' with the desired role
-           ]
+           end: end_time,
+           end_campus: end_campus,
+           //role: 'passenger'
          }
        }
      }, { location: 1, _id: 0 });
@@ -533,32 +658,32 @@ router.get('/matches_uni/:userid/:day', async (req, res) => {
    //console.log(users)
   // console.log(user.location[0].latitude)
   
- //  const locations = users.map(user => user.location[0]); // getting only the first location of each user
- //  console.log(locations);
- //  const coordinates = locations.map(location => ({
- //     lat: parseFloat(location.latitude),
- //     lng: parseFloat(location.longitude)
- //   }));
- const locations = users.map(user => {
-   if (user.location && user.location[0] && user.location[0].latitude) {
-     return user.location[0];
-   } else {
-     return null;
-   }
- });
- 
- console.log(locations);
- 
- const coordinates = locations
-   .filter(location => location !== null)
-   .map(location => ({
-     lat: parseFloat(location.latitude),
-     lng: parseFloat(location.longitude)
-   }));
- 
- console.log(coordinates);
- 
-   console.log(coordinates)
+  // const locations = users.map(user => user.location[0]); // getting only the first location of each user
+  
+  // const coordinates = locations.map(location => ({
+  //    lat: parseFloat(location.latitude),
+  //    lng: parseFloat(location.longitude)
+  //  }));
+  const locations = users.map(user => {
+    if (user.location && user.location[0] && user.location[0].latitude) {
+      return user.location[0];
+    } else {
+      return null;
+    }
+  });
+  
+  console.log(locations);
+  
+  const coordinates = locations
+    .filter(location => location !== null)
+    .map(location => ({
+      lat: parseFloat(location.latitude),
+      lng: parseFloat(location.longitude)
+    }));
+  
+  console.log(coordinates);
+  
+   //console.log(coordinates)
    if(coordinates.length < 1){
      res.send("no one is available")
    }else{
@@ -584,7 +709,7 @@ router.get('/matches_uni/:userid/:day', async (req, res) => {
    filtered_users = await User.find({
      'location.latitude': { $in: latitudes },
      'location.longitude': { $in: longitudes }
-   }, {email: 1, username: 1, erp: 1,contact: 1, location: 1, _id: 1});
+   }, {email: 1, username: 1, erp: 1, location: 1, _id: 1, 'schedule.role':1});
    console.log(filtered_users)
    res.json({ filtered_users });
  })
@@ -600,193 +725,69 @@ router.get('/matches_uni/:userid/:day', async (req, res) => {
  }
 });
 
-//Matches API for going to home
-router.get('/matches_home/:userid/:day', async (req, res) => {
- const userid=req.params.userid
- const user = await User.findById(userid)
- const day=req.params.day
- const schedule=user.schedule
- var uday;
- var end_time;
- var end_campus;
- var role;
- var users;
- const user_lat = user.location[0].latitude;
- const user_lng = user.location[0].longitude;
- const destLat = "24.9396119";
- const destLng = "67.1142199";
- let matches;
- let filtered_users;
-
- for(let i=0; i<schedule.length; i++){
-   if(schedule[i].day==day){
-     uday=schedule[i]
-   }
- }
- 
- end_time = uday.end
- //console.log(start_time)
- //console.log(uday)
- end_campus = uday.end_campus
- role = uday.role
-
-try {
-  if(role == 'driver'){
-    users = await User.find({
-      schedule: {
-        $elemMatch: {
-          day: day,
-          end: end_time,
-          end_campus: end_campus,
-          role: 'passenger'
-        }
-      }
-    }, { location: 1, _id: 0 });
-  }
-  else{
-    users = await User.find({
-      schedule: {
-        $elemMatch: {
-          day: day,
-          end: end_time,
-          end_campus: end_campus,
-          //role: 'passenger'
-        }
-      }
-    }, { location: 1, _id: 0 });
-  }
-  //console.log(users)
- // console.log(user.location[0].latitude)
- 
- // const locations = users.map(user => user.location[0]); // getting only the first location of each user
- 
- // const coordinates = locations.map(location => ({
- //    lat: parseFloat(location.latitude),
- //    lng: parseFloat(location.longitude)
- //  }));
- const locations = users.map(user => {
-   if (user.location && user.location[0] && user.location[0].latitude) {
-     return user.location[0];
-   } else {
-     return null;
-   }
- });
- 
- console.log(locations);
- 
- const coordinates = locations
-   .filter(location => location !== null)
-   .map(location => ({
-     lat: parseFloat(location.latitude),
-     lng: parseFloat(location.longitude)
-   }));
- 
- console.log(coordinates);
- 
-  //console.log(coordinates)
-  if(coordinates.length < 1){
-    res.send("no one is available")
-  }else{
-    
-  getCoordinatesWithin3km(user_lat, user_lng, destLat, destLng, coordinates, process.env.API_KEY)
-.then(async (filteredCoordinates) => {
-  matches = filteredCoordinates;
-  //console.log(matches)
-  //console.log(matches.length)
-  
-  // assuming response is the JSON object you received
-  const latitudes = [];
-  const longitudes = [];
-  
-
-  for (let i = 0; i < matches.length; i++) {
-    latitudes.push(matches[i].lat);
-    longitudes.push(matches[i].lng);
-  }
-  console.log(latitudes)
-  //res.json({ matches });
-
-  filtered_users = await User.find({
-    'location.latitude': { $in: latitudes },
-    'location.longitude': { $in: longitudes }
-  }, {email: 1, username: 1, erp: 1, contact: 1,location: 1, _id: 1});
-  console.log(filtered_users)
-  res.json({ filtered_users });
-})
-.catch((error) => {
-  console.error(error);
-});
-  }
-  
-
-} catch (error) {
-  console.error(error);
-  res.status(500).send('Error');
-}
-});
-
 //Request Coming API
 router.post('/requestcoming/:userid/:day', async (req, res) => {
- const userid=req.params.userid;
- const day=req.params.day;
- const { s_userid } = req.body;
- const s_user = await User.findById(s_userid);
- const user = await User.findById(userid);
- const daySch = user.schedule.filter(schedule => schedule.day === day);
- const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
- try {
-   daySch[0].request_sent.push({
-     id: s_userid,
-     username: s_user.username,
-     email: s_user.email,
-     erp: s_user.erp
-   });
-   //S_daySch[0].request_coming = userid;
-   S_daySch[0].request_coming.push({
-     id: userid,
-     username: user.username,
-     email: user.email,
-     erp: user.erp
-   });
-   console.log(S_daySch[0]);
-   await user.save();
-   await s_user.save();
-   res.send('request sent')
- } catch (error) {
-   console.error(error);
-   res.status(500).send('Error retrieving directions');
- }
+  const userid=req.params.userid;
+  const day=req.params.day;
+  const { s_userid } = req.body;
+  const s_user = await User.findById(s_userid);
+  const user = await User.findById(userid);
+  const daySch = user.schedule.filter(schedule => schedule.day === day);
+  const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+  try {
+    daySch[0].request_sent.push({
+      id: s_userid,
+      username: s_user.username,
+      email: s_user.email,
+      erp: s_user.erp
+    });
+    //S_daySch[0].request_coming = userid;
+    S_daySch[0].request_coming.push({
+      id: userid,
+      username: user.username,
+      email: user.email,
+      erp: user.erp
+    });
+    console.log(S_daySch[0]);
+    await user.save();
+    await s_user.save();
+    res.send('request sent')
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving directions');
+  }
 });
 //Request Going API
 router.post('/requestgoing/:userid/:day', async (req, res) => {
- const userid=req.params.userid;
- const day=req.params.day;
- const { s_userid } = req.body;
- const s_user = await User.findById(s_userid);
- const user = await User.findById(userid);
- const daySch = user.schedule.filter(schedule => schedule.day === day);
- const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
- try {
-   // daySch[0].request_going = s_userid;
-   daySch[0].request_sent.push({
-     id: s_userid,
-     username: s_user.username,
-     email: s_user.email,
-     erp: s_user.erp
-   });
-   S_daySch[0].request_going.push({
-    id: userid,
-    username: user.username,
-    email: user.email,
-    erp: user.erp
-  });
-   await user.save();
-   await s_user.save();
-   res.send('request sent')
- } catch (error) {
-   console.error(error);
-   res.status(500).send('Error retrieving directions');
- }
+  const userid=req.params.userid;
+  const day=req.params.day;
+  const { s_userid } = req.body;
+  const s_user = await User.findById(s_userid);
+  const user = await User.findById(userid);
+  const daySch = user.schedule.filter(schedule => schedule.day === day);
+  const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+  try {
+    // daySch[0].request_going = s_userid;
+    daySch[0].request_sent.push({
+      id: s_userid,
+      username: s_user.username,
+      email: s_user.email,
+      erp: s_user.erp
+    });
+    // S_daySch[0].request_going = userid;
+    S_daySch[0].request_going.push({
+      id: userid,
+      username: user.username,
+      email: user.email,
+      erp: user.erp
+    });
+    await user.save();
+    await s_user.save();
+    res.send('request sent')
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving directions');
+  }
 });
 
 //Accept Going API
@@ -801,7 +802,7 @@ router.post('/acceptgoing/:userid/:day', async (req, res) => {
   //console.log(S_daySch[0].request_going)
   //daySch[0].request_going[0]=[]
 for (let i = 0; i < S_daySch[0].request_sent.length; i++) {
-  if (S_daySch[0].request_sent[i].erp ==user.erp) {
+  if (S_daySch[0].request_sent[i].erp == user.erp) {
     S_daySch[0].request_sent.splice(i, 1);
     break;
   }
@@ -842,49 +843,38 @@ router.post('/acceptcoming/:userid/:day', async (req, res) => {
   const daySch = user.schedule.filter(schedule => schedule.day === day);
   const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
 
-  var available_id;
-
-  try{
-
-    if(daySch[0].request_coming.length>0){
-    for ( i = 0; i < daySch[0].request_coming.length; i++) {
-      if(daySch[0].request_coming[i].id==s_userid){
-      available_id = daySch[0].request_coming[i];
-      }
-      else {
-       return res.json({ message: 'no req' });
-
-        
-      }
+  for (let i = 0; i < S_daySch[0].request_sent.length; i++) {
+    if (S_daySch[0].request_sent[i].erp == user.erp) {
+      S_daySch[0].request_sent.splice(i, 1);
+      break;
     }
-    
-    S_daySch[0].accept_coming = userid;
-    daySch[0].accept_coming = s_userid;
-
-    console.log(available_id)
-    let index = daySch[0].request_coming.indexOf(available_id);
-    console.log(index)
-// Remove the element if found
-if (index !== -1) {
-  daySch[0].request_coming.splice(index, 1);
-}
-
-    await user.save();
-    await s_user.save()
-    res.send('request ok')
-
   }
-
-else {
-  res.send('No req exist');
-}
-  }
-   catch (error) {
-    console.error(error);
-    res.status(500).send('Error retrieving req');
-  }
-});
-
+  
+  for (let i = 0; i < daySch[0].request_coming.length; i++) {
+    if (daySch[0].request_coming[i].erp == s_user.erp) {
+      daySch[0].request_coming.splice(i, 1);
+      break;
+    }
+  } 
+  
+  
+  daySch[0].accept_coming.push({
+    id: s_userid,
+    username: s_user.username,
+    email: s_user.email,
+    erp: s_user.erp
+  });
+  S_daySch[0].accept_coming.push({
+    id: userid,
+    username: user.username,
+    email: user.email,
+    erp: user.erp
+  });
+  await user.save();
+  await s_user.save();
+  res.send(daySch[0].accept_coming)
+  
+  });
 /// reject request
 router.post('/rejectreq/:userid/:day', async (req, res) => {
   const userid=req.params.userid;
@@ -894,60 +884,27 @@ router.post('/rejectreq/:userid/:day', async (req, res) => {
   const user = await User.findById(userid);
   const daySch = user.schedule.filter(schedule => schedule.day === day);
   const S_daySch = s_user.schedule.filter(schedule => schedule.day === day);
+///////
+try{
+for (let i = 0; i < daySch[0].request_coming.length; i++) {
+  if (daySch[0].request_coming[i].erp == s_user.erp) {
+    daySch[0].request_coming.splice(i, 1);
+    break;
+  }
+} 
+for (let i = 0; i < daySch[0].request_going.length; i++) {
+  if (daySch[0].request_going[i].erp == s_user.erp) {
+    daySch[0].request_going.splice(i, 1);
+    break;
+  }
+} 
 
-  var available_id;
-
-  try{
-    if(daySch[0].accept_coming.length>0){
-      for ( i = 0; i < daySch[0].accept_coming.length; i++) {
-        if(daySch[0].accept_coming[i].id==s_userid){
-          let index = daySch[0].accept_coming.indexOf(daySch[0].accept_coming[i]);
-          //console.log(index)
-      // Remove the element if found
-      if (index !== -1) {
-        daySch[0].accept_coming.splice(index, 1);
-        await user.save();
-      await s_user.save()
-      }
-
-        }
-
-        else {
-         return res.json({ message: 'no req 1' });
-  
-          
-        }
-      }
       await user.save();
       await s_user.save()
       return res.json({ message: 'done' });
     
-    }
     
-    if(daySch[0].accept_going.length>0){
-      for ( i = 0; i < daySch[0].accept_going.length; i++) {
-        console.log(daySch[0].accept_going[i])
-        if(daySch[0].accept_going[i].id==s_userid){
-          let index = daySch[0].accept_going.indexOf(daySch[0].accept_going[i]);
-          //console.log(index)
-      // Remove the element if found
-      if (index !== -1) {
-        daySch[0].accept_going.splice(index, 1);
-      }
-        }
-        else {
-         return res.json({ message: 'no req 2' });
-  
-          
-        }
-      }
-      await user.save();
-      await s_user.save()
-      return res.json({ message: 'done' });
-     
-    }
-    else return res.json({ message: 'no req F' });
-  
+    
   }
    catch (error) {
     console.error(error);
@@ -1068,7 +1025,7 @@ async function getCoordinatesWithin3km(startLat, startLng, endLat, endLng, coord
 
  const filteredCoordinates = coordinates.filter((coordinate) => {
    const distance = getDistanceFromRoute(routeCoordinates, coordinate);
-   return distance <= 4;
+   return distance <= 3;
  });
 
  return filteredCoordinates;
